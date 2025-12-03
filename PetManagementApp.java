@@ -71,9 +71,14 @@ class DataManager {
     // --- CÁC HÀM THÊM ---
     public static void addService(String name, double price) { mockServices.add(new Service(++serviceIdCounter, name, price)); }
     public static void addPet(String name, String species, int age, String ownerUser) { mockPets.add(new Pet(++petIdCounter, name, species, age, ownerUser)); }
-    public static void addBooking(String user, String pName, String sName, double price) {
-        String date = new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date());
-        mockBookings.add(new Booking(++bookingIdCounter, user, pName, sName, price, "Chờ duyệt", date));
+    public static void addBooking(String user, String pName, String sName, double price, Date date, String time) {
+        // Định dạng ngày thành chuỗi dd/MM/yyyy (ví dụ: 25/12/2025)
+        String dateStr = new SimpleDateFormat("dd/MM/yyyy").format(date);
+        
+        // Ghép ngày và giờ thành chuỗi hoàn chỉnh
+        String finalDateTime = dateStr + " " + time;
+        
+        mockBookings.add(new Booking(++bookingIdCounter, user, pName, sName, price, "Chờ duyệt", finalDateTime));
     }
 
     // --- CÁC HÀM CẬP NHẬT/XÓA (ĐÂY LÀ PHẦN BẠN ĐANG THIẾU) ---
@@ -114,6 +119,19 @@ class DataManager {
         for(Pet p : mockPets) if(p.ownerUsername.equals(ownerUser)) list.add(p);
         return list;
     }
+    public static void searchPetsToTable(DefaultTableModel model, String keyword) {
+    model.setRowCount(0);
+    String key = keyword.toLowerCase(); // Chuyển về chữ thường để tìm kiếm không phân biệt hoa thường
+    for (Pet p : mockPets) {
+        // Tìm kiếm theo Tên, Loài hoặc Chủ sở hữu
+        if (p.name.toLowerCase().contains(key) || 
+            p.species.toLowerCase().contains(key) || 
+            p.ownerUsername.toLowerCase().contains(key)) {
+            
+            model.addRow(new Object[]{p.id, p.name, p.species, p.age + " tuổi", p.ownerUsername});
+        }
+    }
+}
 }
 
 // ==========================================
@@ -280,7 +298,7 @@ class LoginDialog extends JDialog {
         card.add(btnLogin, gbc);
 
         gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0);
-        JButton btnRegister = UIStyle.createButton("Đăng ký mới", "📝", UIStyle.COLOR_SUCCESS);
+        JButton btnRegister = UIStyle.createButton("Đăng ký", "📝", UIStyle.COLOR_SUCCESS);
         card.add(btnRegister, gbc);
 
         mainPanel.add(card);
@@ -288,7 +306,7 @@ class LoginDialog extends JDialog {
         btnLogin.addActionListener(e -> {
             User user = DataManager.checkLogin(txtUser.getText(), new String(txtPass.getPassword()));
             if (user != null) { authenticatedUser = user; succeeded = true; dispose(); } 
-            else JOptionPane.showMessageDialog(this, "Sai thông tin! (Admin: admin/123)", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            else JOptionPane.showMessageDialog(this, "Sai thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         });
         
         btnRegister.addActionListener(e -> {
@@ -371,8 +389,8 @@ public class PetManagementApp extends JFrame {
         JPanel container = new JPanel(new BorderLayout(20, 20));
         container.setBorder(new EmptyBorder(20, 20, 20, 20));
         container.setBackground(UIStyle.COLOR_BG);
-
-        // FORM SECTION
+        
+        // --- FORM SECTION ---
         JPanel form = new JPanel(new GridBagLayout());
         form.setBackground(Color.WHITE);
         
@@ -385,22 +403,78 @@ public class PetManagementApp extends JFrame {
         GridBagConstraints g = new GridBagConstraints();
         g.insets = new Insets(10, 15, 10, 15); g.fill = GridBagConstraints.HORIZONTAL;
 
+        // --- CÁC THÀNH PHẦN NHẬP LIỆU ---
         JComboBox<Pet> cbMyPets = new JComboBox<>();
         JComboBox<Service> cbServices = new JComboBox<>();
+        
+        // 1. Tạo ô chọn NGÀY (JSpinner)
+        // Lấy thời điểm 00:00:00 của ngày hôm nay để làm mốc
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        calendar.set(java.util.Calendar.MINUTE, 0);
+        calendar.set(java.util.Calendar.SECOND, 0);
+        calendar.set(java.util.Calendar.MILLISECOND, 0);
+        Date today = calendar.getTime();
+
+        // Cấu hình Model:
+        // - value: today (mặc định hiển thị hôm nay)
+        // - start: today (không cho lùi về quá khứ)
+        // - end: null (không giới hạn tương lai)
+        // - step: Calendar.DAY_OF_MONTH (bước nhảy theo ngày)
+        SpinnerDateModel dateModel = new SpinnerDateModel(today, today, null, java.util.Calendar.DAY_OF_MONTH);
+        JSpinner txtDate = new JSpinner(dateModel);
+        
+        // Định dạng hiển thị ngày/tháng/năm
+        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(txtDate, "dd/MM/yyyy");
+        txtDate.setEditor(dateEditor);
+        txtDate.setPreferredSize(new Dimension(200, 35));
+
+        // 2. Tạo ô chọn GIỜ (JComboBox)
+        String[] timeSlots = {"08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", 
+                            "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"};
+        JComboBox<String> cbTime = new JComboBox<>(timeSlots);
+        cbTime.setPreferredSize(new Dimension(200, 35));
+
         cbMyPets.setPreferredSize(new Dimension(200, 35));
         cbServices.setPreferredSize(new Dimension(200, 35));
 
+        // --- BỐ CỤC GIAO DIỆN ---
+        // Dòng 1: Thú cưng + Nút refresh
         g.gridx=0; g.gridy=0; form.add(new JLabel("Chọn Thú Cưng:"), g);
-        g.gridx=1; form.add(cbMyPets, g);
+        
+        JPanel pnlPetSelect = new JPanel(new BorderLayout(5, 0));
+        pnlPetSelect.setBackground(Color.WHITE);
+        pnlPetSelect.add(cbMyPets, BorderLayout.CENTER);
+        
+        JButton btnRefreshData = new JButton("🔄");
+        btnRefreshData.setToolTipText("Cập nhật danh sách");
+        btnRefreshData.setBackground(Color.WHITE);
+        btnRefreshData.setBorder(new LineBorder(new Color(200,200,200)));
+        btnRefreshData.setPreferredSize(new Dimension(35, 35));
+        pnlPetSelect.add(btnRefreshData, BorderLayout.EAST);
+        g.gridx=1; form.add(pnlPetSelect, g);
+
+        // Dòng 2: Dịch vụ
         g.gridx=0; g.gridy=1; form.add(new JLabel("Chọn Dịch Vụ:"), g);
         g.gridx=1; form.add(cbServices, g);
+
+        // Dòng 3: Chọn Ngày (MỚI)
+        g.gridx=0; g.gridy=2; form.add(new JLabel("Ngày Hẹn:"), g);
+        g.gridx=1; form.add(txtDate, g);
+
+        // Dòng 4: Chọn Giờ
+        g.gridx=0; g.gridy=3; form.add(new JLabel("Giờ Hẹn:"), g);
+        g.gridx=1; form.add(cbTime, g);
         
+        // Dòng 5: Nút Gửi
         JButton btnBook = UIStyle.createButton("GỬI YÊU CẦU", "📩", UIStyle.COLOR_SUCCESS);
-        g.gridx=0; g.gridy=2; g.gridwidth=2; g.insets = new Insets(20, 15, 10, 15);
+        g.gridx=0; g.gridy=4; g.gridwidth=2; g.insets = new Insets(20, 15, 10, 15);
         form.add(btnBook, g);
 
-        // TABLE SECTION
-        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tài Khoản", "Thú Cưng", "Dịch Vụ", "Giá", "Ngày Đặt", "Trạng Thái"}, 0);
+        // --- TABLE SECTION (Chỉ Xem) ---
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tài Khoản", "Thú Cưng", "Dịch Vụ", "Giá", "Thời Gian Hẹn", "Trạng Thái"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
         JTable table = new JTable(model);
         UIStyle.styleTable(table);
         
@@ -418,26 +492,46 @@ public class PetManagementApp extends JFrame {
         container.add(tablePanel, BorderLayout.CENTER);
         container.add(bottomBar, BorderLayout.SOUTH);
 
-        // Logic
+        // --- LOGIC ---
         Runnable reload = () -> {
-            cbMyPets.removeAllItems(); for(Pet p : DataManager.getPetsByOwner(currentUser.username)) cbMyPets.addItem(p);
-            cbServices.removeAllItems(); for(Service s : DataManager.mockServices) cbServices.addItem(s);
+            Object selectedPet = cbMyPets.getSelectedItem();
+            cbMyPets.removeAllItems(); 
+            for(Pet p : DataManager.getPetsByOwner(currentUser.username)) cbMyPets.addItem(p);
+            if(selectedPet != null) {} 
+            
+            cbServices.removeAllItems(); 
+            for(Service s : DataManager.mockServices) cbServices.addItem(s);
+            
             DataManager.loadBookingsToTable(model, currentUser.username, currentUser.role);
         };
+        
         reload.run();
 
-        btnBook.addActionListener(e -> {
-            Pet pt = (Pet)cbMyPets.getSelectedItem(); Service sv = (Service)cbServices.getSelectedItem();
-            if(pt == null) { JOptionPane.showMessageDialog(this, "Chưa có thú cưng!"); return; }
-            DataManager.addBooking(currentUser.username, pt.name, sv.name, sv.price);
+        btnRefreshData.addActionListener(e -> {
             reload.run();
-            JOptionPane.showMessageDialog(this, "Đã gửi yêu cầu thành công!");
+            JOptionPane.showMessageDialog(this, "Đã cập nhật dữ liệu!");
+        });
+
+        // --- XỬ LÝ SỰ KIỆN GỬI YÊU CẦU ---
+        btnBook.addActionListener(e -> {
+            Pet pt = (Pet)cbMyPets.getSelectedItem(); 
+            Service sv = (Service)cbServices.getSelectedItem();
+            Date date = (Date)txtDate.getValue(); // Lấy ngày từ Spinner
+            String time = (String)cbTime.getSelectedItem(); // Lấy giờ
+
+            if(pt == null) { JOptionPane.showMessageDialog(this, "Chưa có thú cưng!"); return; }
+            
+            // Gọi hàm addBooking mới
+            DataManager.addBooking(currentUser.username, pt.name, sv.name, sv.price, date, time);
+            
+            reload.run();
+            JOptionPane.showMessageDialog(this, "Đã đặt lịch hẹn ngày " + new SimpleDateFormat("dd/MM/yyyy").format(date) + " lúc " + time + " thành công!");
         });
 
         btnViewInvoice.addActionListener(e -> {
             int r = table.getSelectedRow();
             if(r == -1) { JOptionPane.showMessageDialog(this, "Vui lòng chọn đơn hàng!"); return; }
-            String status = (String) model.getValueAt(r, 6);
+            String status = (String) model.getValueAt(r, 6); 
             if(!status.equals("Đã Xong")) { JOptionPane.showMessageDialog(this, "Đơn chưa hoàn thành!", "Cảnh báo", JOptionPane.WARNING_MESSAGE); return; }
             
             Booking b = DataManager.getBookingById((int)model.getValueAt(r, 0));
@@ -513,7 +607,7 @@ public class PetManagementApp extends JFrame {
         g.gridy = row++; form.add(new JLabel("Tên thú cưng:"), g);
         g.gridy = row++; form.add(txtName, g);
         
-        g.gridy = row++; form.add(new JLabel("Loài (Chó/Mèo):"), g);
+        g.gridy = row++; form.add(new JLabel("Loài:"), g);
         g.gridy = row++; form.add(txtSpecies, g);
         
         g.gridy = row++; form.add(new JLabel("Tuổi:"), g);
@@ -529,7 +623,9 @@ public class PetManagementApp extends JFrame {
         form.add(new JPanel(){{setOpaque(false);}}, g);
 
         // TABLE SECTION (RIGHT)
-        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tên", "Loài", "Tuổi", "Chủ"}, 0);
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tên", "Loài", "Tuổi", "Chủ"}, 0){
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
         JTable table = new JTable(model);
         UIStyle.styleTable(table);
         DataManager.loadPetsToTable(model, currentUser.username, currentUser.role);
@@ -598,7 +694,9 @@ public class PetManagementApp extends JFrame {
         // ============================
         // 2. CENTER: BẢNG DỮ LIỆU
         // ============================
-        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tên Thú Cưng", "Loài", "Tuổi", "Chủ Sở Hữu"}, 0);
+        DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Tên Thú Cưng", "Loài", "Tuổi", "Chủ Sở Hữu"}, 0){
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
         JTable table = new JTable(model);
         UIStyle.styleTable(table);
         
@@ -614,8 +712,15 @@ public class PetManagementApp extends JFrame {
 
         // Sự kiện nút Tìm kiếm
         btnSearch.addActionListener(e -> {
-            DataManager.loadPetsToTable(model, txtSearch.getText(), "ADMIN");
-        });
+            String keyword = txtSearch.getText().trim();
+            if (keyword.isEmpty()) {
+                // Nếu ô tìm kiếm rỗng, load lại tất cả
+                DataManager.loadPetsToTable(model, "admin", "ADMIN");
+            } else {
+                // Nếu có từ khóa, gọi hàm tìm kiếm mới
+                DataManager.searchPetsToTable(model, keyword);
+            }
+        }); 
 
         // Add vào container
         container.add(searchPanel, BorderLayout.NORTH);
