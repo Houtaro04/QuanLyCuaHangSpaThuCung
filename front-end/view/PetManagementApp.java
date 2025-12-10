@@ -3,7 +3,7 @@ package view;
 import controller.DataManager;
 import model.*;
 import utils.UIStyle;
-import main.Main;
+// import main.Main; // Bỏ dòng này nếu bạn muốn dùng cách gọi Login trực tiếp bên dưới
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,6 +11,7 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.print.PrinterException; // Import thư viện in ấn
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -20,7 +21,7 @@ public class PetManagementApp extends JFrame {
     public PetManagementApp(User user) {
         this.currentUser = user;
         setTitle("Hệ Thống Quản Lý - " + user.fullName);
-        setSize(1200, 750);
+        setSize(1250, 750); // Mở rộng chiều ngang một chút để hiển thị đủ cột
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -45,8 +46,17 @@ public class PetManagementApp extends JFrame {
         JButton btnLogout = UIStyle.createButton("Đăng Xuất", "🚪", UIStyle.COLOR_DANGER);
         btnLogout.setForeground(Color.BLACK);
         btnLogout.addActionListener(e -> { 
-            dispose(); 
-            Main.main(null); // Quay lại màn hình Login
+            dispose(); // 1. Đóng cửa sổ hiện tại
+            
+            // 2. Mở lại màn hình đăng nhập
+            LoginDialog login = new LoginDialog(null);
+            login.setVisible(true); // Code sẽ dừng ở đây chờ người dùng đăng nhập xong
+            
+            // 3. Sau khi LoginDialog đóng, kiểm tra xem đăng nhập có thành công không
+            if (login.isSucceeded()) {
+                // Nếu thành công -> Mở lại màn hình chính với user mới
+                new PetManagementApp(login.getAuthenticatedUser()).setVisible(true);
+            }
         });
 
         userInfo.add(lblUser);
@@ -66,15 +76,73 @@ public class PetManagementApp extends JFrame {
             tabs.addTab(" QUẢN LÝ ĐẶT LỊCH ", new UIStyle.EmojiIcon("📅", 20), createBookingMgmtPanel());
             tabs.addTab(" QUẢN LÝ DỊCH VỤ ", new UIStyle.EmojiIcon("✂️", 20), createServiceMgmtPanel());
             tabs.addTab(" DANH SÁCH THÚ CƯNG ", new UIStyle.EmojiIcon("🐶", 20), createPetListPanel());
+            // [MỚI] Tab quản lý hồ sơ khách hàng
+            tabs.addTab(" QUẢN LÝ KHÁCH HÀNG ", new UIStyle.EmojiIcon("👥", 20), createCustomerManagerPanel());
         } else {
             tabs.addTab(" ĐẶT LỊCH DỊCH VỤ ", new UIStyle.EmojiIcon("✨", 20), createCustomerBookingPanel());
             tabs.addTab(" THÚ CƯNG CỦA TÔI ", new UIStyle.EmojiIcon("🐕", 20), createMyPetPanel());
+            // [MỚI] Tab xem lịch sử
+            tabs.addTab(" LỊCH SỬ SỬ DỤNG ", new UIStyle.EmojiIcon("📜", 20), createHistoryPanel());
         }
 
         add(tabs, BorderLayout.CENTER);
     }
 
-    // --- PANEL: CUSTOMER BOOKING ---
+    // --- [MỚI] PANEL: ADMIN QUẢN LÝ KHÁCH HÀNG ---
+    private JPanel createCustomerManagerPanel() {
+        JPanel p = new JPanel(new BorderLayout(20, 20));
+        p.setBackground(UIStyle.COLOR_BG);
+        p.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        DefaultTableModel model = new DefaultTableModel(new String[]{"Tài khoản", "Họ Tên", "Số ĐT", "Email"}, 0);
+        JTable table = new JTable(model);
+        UIStyle.styleTable(table);
+        
+        // Load dữ liệu (Cần đảm bảo bạn đã update DataManager ở bước trước)
+        DataManager.loadCustomersToTable(model);
+        
+        p.add(new JScrollPane(table), BorderLayout.CENTER);
+        
+        JButton btnRefresh = UIStyle.createButton("LÀM MỚI DANH SÁCH", "🔄", UIStyle.COLOR_PRIMARY);
+        btnRefresh.addActionListener(e -> DataManager.loadCustomersToTable(model));
+        JPanel bottom = new JPanel(); bottom.setOpaque(false); bottom.add(btnRefresh);
+        p.add(bottom, BorderLayout.SOUTH);
+        
+        return p;
+    }
+
+    // --- [MỚI] PANEL: LỊCH SỬ DÙNG DỊCH VỤ (CHO KHÁCH) ---
+    private JPanel createHistoryPanel() {
+        JPanel p = new JPanel(new BorderLayout(20, 20));
+        p.setBackground(UIStyle.COLOR_BG);
+        p.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        DefaultTableModel model = new DefaultTableModel(new String[]{"Mã Đơn", "Thú Cưng", "Dịch Vụ", "Giá", "Ngày", "Trạng Thái"}, 0);
+        JTable table = new JTable(model);
+        UIStyle.styleTable(table);
+        
+        Runnable loadHistory = () -> {
+            model.setRowCount(0);
+            for(Booking b : DataManager.mockBookings) {
+                // Chỉ lấy booking của user hiện tại
+                if(b.customerUser.equals(currentUser.username)) {
+                    model.addRow(new Object[]{b.id, b.petName, b.serviceName, String.format("%,.0f đ", b.price), b.date, b.status});
+                }
+            }
+        };
+        loadHistory.run();
+        
+        JButton btnRefresh = UIStyle.createButton("CẬP NHẬT", "🔄", UIStyle.COLOR_PRIMARY);
+        btnRefresh.addActionListener(e -> loadHistory.run());
+        
+        p.add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT)); bottom.setOpaque(false); bottom.add(btnRefresh);
+        p.add(bottom, BorderLayout.SOUTH);
+        
+        return p;
+    }
+
+    // --- PANEL: CUSTOMER BOOKING (Cập nhật nút Hóa đơn) ---
     private JPanel createCustomerBookingPanel() {
         JPanel container = new JPanel(new BorderLayout(20, 20));
         container.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -149,7 +217,8 @@ public class PetManagementApp extends JFrame {
         tablePanel.setBorder(new LineBorder(new Color(200,200,200)));
         tablePanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JButton btnViewInvoice = UIStyle.createButton("XEM HÓA ĐƠN", "📄", UIStyle.COLOR_WARNING);
+        // [CẬP NHẬT] Đổi icon và tên nút
+        JButton btnViewInvoice = UIStyle.createButton("XEM HÓA ĐƠN & IN", "🖨️", UIStyle.COLOR_WARNING);
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomBar.setOpaque(false);
         bottomBar.add(btnViewInvoice);
@@ -388,6 +457,7 @@ public class PetManagementApp extends JFrame {
         return container;
     }
 
+    // --- [CẬP NHẬT] HÀM HIỂN THỊ & IN HÓA ĐƠN ---
     private void showInvoice(Booking b) {
         String txt = 
             "================================\n" +
@@ -396,6 +466,7 @@ public class PetManagementApp extends JFrame {
             " Mã Đơn   : #" + b.id + "\n" +
             " Ngày     : " + b.date + "\n" +
             " Khách    : " + currentUser.fullName + "\n" +
+            " SĐT      : " + (currentUser.phone != null ? currentUser.phone : "N/A") + "\n" + // Hiện SĐT
             "--------------------------------\n" +
             " Dịch Vụ  : " + b.serviceName + "\n" +
             " Thú Cưng : " + b.petName + "\n" +
@@ -403,7 +474,32 @@ public class PetManagementApp extends JFrame {
             " TỔNG TIỀN: " + String.format("%,.0f VND", b.price) + "\n\n" +
             "================================\n" +
             "   Cảm ơn quý khách đã tin dùng!   ";
-        JTextArea area = new JTextArea(txt); area.setFont(new Font("Monospaced", Font.BOLD, 14)); area.setEditable(false);
-        JOptionPane.showMessageDialog(this, new JScrollPane(area), "Hóa Đơn", JOptionPane.PLAIN_MESSAGE);
+            
+        JTextArea area = new JTextArea(txt); 
+        area.setFont(new Font("Monospaced", Font.BOLD, 14)); 
+        area.setEditable(false);
+        
+        // Tạo panel chứa nút In
+        JPanel pnl = new JPanel(new BorderLayout());
+        pnl.add(new JScrollPane(area), BorderLayout.CENTER);
+        
+        JButton btnPrint = new JButton("Xuất PDF / In");
+        btnPrint.addActionListener(e -> {
+            try {
+                // Lệnh này sẽ mở hộp thoại in của máy tính -> Chọn "Save as PDF"
+                boolean complete = area.print(); 
+                if (complete) JOptionPane.showMessageDialog(this, "Đã in thành công!");
+            } catch (PrinterException ex) {
+                ex.printStackTrace();
+            }
+        });
+        pnl.add(btnPrint, BorderLayout.SOUTH);
+        
+        // Hiển thị dialog to hơn một chút
+        JDialog dialog = new JDialog(this, "Hóa Đơn Chi Tiết", true);
+        dialog.setContentPane(pnl);
+        dialog.setSize(400, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }

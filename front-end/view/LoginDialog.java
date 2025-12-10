@@ -29,7 +29,7 @@ public class LoginDialog extends JDialog {
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 0, 10, 0);
+        gbc.insets = new Insets(5, 0, 5, 0); // Giảm khoảng cách chút cho gọn
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0; gbc.gridy = 0; 
 
@@ -43,26 +43,20 @@ public class LoginDialog extends JDialog {
         lblTitle.setForeground(UIStyle.COLOR_PRIMARY);
         card.add(lblTitle, gbc);
 
-        gbc.gridy++;
-        card.add(new JLabel("Tài Khoản:"), gbc);
-        gbc.gridy++;
-        txtUser = UIStyle.createTextField();
-        card.add(txtUser, gbc);
+        gbc.gridy++; card.add(new JLabel("Tài Khoản:"), gbc);
+        gbc.gridy++; txtUser = UIStyle.createTextField(); card.add(txtUser, gbc);
 
-        gbc.gridy++;
-        card.add(new JLabel("Mật Khẩu:"), gbc);
-        gbc.gridy++;
-        txtPass = new JPasswordField(20);
+        gbc.gridy++; card.add(new JLabel("Mật Khẩu:"), gbc);
+        gbc.gridy++; txtPass = new JPasswordField(20);
         txtPass.setBorder(txtUser.getBorder());
-        txtPass.setFont(UIStyle.FONT_NORMAL);
         card.add(txtPass, gbc);
 
-        gbc.gridy++; gbc.insets = new Insets(25, 0, 10, 0);
+        gbc.gridy++; gbc.insets = new Insets(20, 0, 10, 0);
         JButton btnLogin = UIStyle.createButton("Đăng nhập", "🔓", UIStyle.COLOR_ACCENT);
         card.add(btnLogin, gbc);
 
         gbc.gridy++; gbc.insets = new Insets(0, 0, 0, 0);
-        JButton btnRegister = UIStyle.createButton("Đăng ký", "📝", UIStyle.COLOR_SUCCESS);
+        JButton btnRegister = UIStyle.createButton("Đăng ký tài khoản", "📝", UIStyle.COLOR_SUCCESS);
         card.add(btnRegister, gbc);
 
         mainPanel.add(card);
@@ -73,23 +67,42 @@ public class LoginDialog extends JDialog {
             else JOptionPane.showMessageDialog(this, "Sai thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         });
         
+        // --- XỬ LÝ ĐĂNG KÝ (CẬP NHẬT MỚI) ---
         btnRegister.addActionListener(e -> {
             JTextField txtTenThat = new JTextField();
             JTextField txtTaiKhoan = new JTextField();
+            JTextField txtSDT = new JTextField();  // MỚI
+            JTextField txtEmail = new JTextField(); // MỚI
             JPasswordField txtMatKhau = new JPasswordField();
+            JPasswordField txtMatKhau2 = new JPasswordField(); // MỚI: Nhập lại MK
 
-            Object[] message = { "Họ và tên:", txtTenThat, "Tên tài khoản:", txtTaiKhoan, "Mật khẩu:", txtMatKhau };
+            Object[] message = { 
+                "Họ và tên:", txtTenThat, 
+                "Số điện thoại:", txtSDT,
+                "Email:", txtEmail,
+                "Tên tài khoản:", txtTaiKhoan, 
+                "Mật khẩu:", txtMatKhau,
+                "Nhập lại mật khẩu:", txtMatKhau2
+            };
+            
             int option = JOptionPane.showConfirmDialog(this, message, "Đăng ký tài khoản mới", JOptionPane.OK_CANCEL_OPTION);
 
             if (option == JOptionPane.OK_OPTION) {
                 String name = txtTenThat.getText().trim();
+                String phone = txtSDT.getText().trim();
+                String email = txtEmail.getText().trim();
                 String user = txtTaiKhoan.getText().trim();
                 String pass = new String(txtMatKhau.getPassword());
-                if (!name.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
-                    DataManager.registerCustomer(user, pass, name); 
-                    JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
+                String rePass = new String(txtMatKhau2.getPassword());
+
+                if (name.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Vui lòng nhập các thông tin bắt buộc!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                } else if (!pass.equals(rePass)) {
+                    JOptionPane.showMessageDialog(this, "Mật khẩu nhập lại không khớp!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    // Gọi hàm đăng ký mới có thêm phone, email
+                    DataManager.registerCustomer(user, pass, name, phone, email); 
+                    JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
                 }
             }
         });

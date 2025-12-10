@@ -15,8 +15,9 @@ public class DataManager {
     private static int petIdCounter = 0, serviceIdCounter = 0, bookingIdCounter = 0;
 
     static {
-        mockUsers.add(new User("admin", "123", "ADMIN", "Quản Lý Cửa Hàng"));
-        mockUsers.add(new User("khach", "123", "CUSTOMER", "Nguyễn Văn Khách"));
+        // CẬP NHẬT: Thêm SĐT và Email giả
+        mockUsers.add(new User("admin", "123", "ADMIN", "Quản Lý Cửa Hàng", "0909000111", "admin@petshop.com"));
+        mockUsers.add(new User("khach", "123", "CUSTOMER", "Nguyễn Văn Khách", "0912345678", "khach@gmail.com"));
 
         addService("Tắm gội thơm tho", 150000);
         addService("Cắt tỉa tạo kiểu", 250000);
@@ -31,7 +32,11 @@ public class DataManager {
         for (User user : mockUsers) if (user.username.equals(u) && user.password.equals(p)) return user;
         return null;
     }
-    public static void registerCustomer(String u, String p, String name) { mockUsers.add(new User(u, p, "CUSTOMER", name)); }
+
+    // CẬP NHẬT: Hàm đăng ký nhận thêm SĐT, Email
+    public static void registerCustomer(String u, String p, String name, String phone, String email) { 
+        mockUsers.add(new User(u, p, "CUSTOMER", name, phone, email)); 
+    }
     
     // --- CREATE ---
     public static void addService(String name, double price) { mockServices.add(new Service(++serviceIdCounter, name, price)); }
@@ -43,14 +48,8 @@ public class DataManager {
     }
 
     // --- DELETE/UPDATE ---
-    public static void deletePet(int id) {
-        mockPets.removeIf(p -> p.id == id);
-    }
-
-    public static void deleteService(int id) {
-        mockServices.removeIf(s -> s.id == id);
-    }
-
+    public static void deletePet(int id) { mockPets.removeIf(p -> p.id == id); }
+    public static void deleteService(int id) { mockServices.removeIf(s -> s.id == id); }
     public static void updateBookingStatus(int id, String newStatus) {
         for(Booking b : mockBookings) if(b.id == id) { b.status = newStatus; break; }
     }
@@ -66,14 +65,7 @@ public class DataManager {
         int stt = 1; 
         for (Pet p : mockPets) {
             if (role.equals("ADMIN") || p.ownerUsername.equals(viewerUser)) {
-                model.addRow(new Object[]{
-                    stt++,           // STT
-                    p.name,          // Tên
-                    p.species,       // Loài
-                    p.age + " tuổi", // Tuổi
-                    p.ownerUsername, // Chủ
-                    p.id             // ID ẨN
-                });
+                model.addRow(new Object[]{ stt++, p.name, p.species, p.age + " tuổi", p.ownerUsername, p.id });
             }
         }
     }
@@ -89,6 +81,16 @@ public class DataManager {
             model.addRow(new Object[]{b.id, b.customerUser, b.petName, b.serviceName, String.format("%,.0f đ", b.price), b.date, b.status});
     }
 
+    // MỚI: Load danh sách khách hàng cho Admin
+    public static void loadCustomersToTable(DefaultTableModel model) {
+        model.setRowCount(0);
+        for (User u : mockUsers) {
+            if (u.role.equals("CUSTOMER")) {
+                model.addRow(new Object[]{u.username, u.fullName, u.phone, u.email});
+            }
+        }
+    }
+
     public static Vector<Pet> getPetsByOwner(String ownerUser) {
         Vector<Pet> list = new Vector<>();
         for(Pet p : mockPets) if(p.ownerUsername.equals(ownerUser)) list.add(p);
@@ -99,9 +101,7 @@ public class DataManager {
         model.setRowCount(0);
         String key = keyword.toLowerCase();
         for (Pet p : mockPets) {
-            if (p.name.toLowerCase().contains(key) || 
-                p.species.toLowerCase().contains(key) || 
-                p.ownerUsername.toLowerCase().contains(key)) {
+            if (p.name.toLowerCase().contains(key) || p.species.toLowerCase().contains(key) || p.ownerUsername.toLowerCase().contains(key)) {
                 model.addRow(new Object[]{p.id, p.name, p.species, p.age + " tuổi", p.ownerUsername});
             }
         }
