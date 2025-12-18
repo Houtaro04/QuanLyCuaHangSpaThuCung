@@ -10,7 +10,7 @@ public class DatabaseConnection {
     // 1. Sửa DB_URL:
     //    - Thay localhost:1433 bằng HOUTARO\\SQLEXPRESS (Lưu ý: Phải dùng 2 dấu gạch chéo \\ để Java hiểu là 1 ký tự \)
     //    - Thêm integratedSecurity=true để dùng tài khoản Windows
-    private static final String DB_URL = "jdbc:sqlserver://HOUTARO\\SQLEXPRESS;databaseName=PetShopDB;integratedSecurity=true;encrypt=false;trustServerCertificate=true;";
+    private static final String DB_URL = "jdbc:sqlserver://HOANGVIET;databaseName=PetShopDB;integratedSecurity=true;encrypt=false;trustServerCertificate=true;";
 
     private static Connection connection = null;
     
