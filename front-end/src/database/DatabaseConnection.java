@@ -5,11 +5,13 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    // Thay đổi thông tin kết nối theo SQL Server của bạn
-    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=PetShopDB;encrypt=false;trustServerCertificate=true";
-    private static final String USER = "sa"; // Thay username của bạn
-    private static final String PASS = "123456"; // Thay password của bạn
-    
+
+    // --- CÁC DÒNG CẦN SỬA ---
+    // 1. Sửa DB_URL:
+    //    - Thay localhost:1433 bằng HOUTARO\\SQLEXPRESS (Lưu ý: Phải dùng 2 dấu gạch chéo \\ để Java hiểu là 1 ký tự \)
+    //    - Thêm integratedSecurity=true để dùng tài khoản Windows
+    private static final String DB_URL = "jdbc:sqlserver://HOUTARO\\SQLEXPRESS;databaseName=PetShopDB;integratedSecurity=true;encrypt=false;trustServerCertificate=true;";
+
     private static Connection connection = null;
     
     // Load JDBC Driver
@@ -28,15 +30,18 @@ public class DatabaseConnection {
     public static Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
-                connection = DriverManager.getConnection(DB_URL, USER, PASS);
+                // Khi dùng integratedSecurity, DriverManager sẽ tự tìm file .dll để xác thực với Windows
+                connection = DriverManager.getConnection(DB_URL); 
+                // Lưu ý: Có thể bỏ USER, PASS ở hàm getConnection khi dùng URL trên, 
+                // hoặc để nguyên DriverManager.getConnection(DB_URL, USER, PASS) cũng không sao vì USER/PASS rỗng.
                 System.out.println("✓ Kết nối database thành công!");
             }
         } catch (SQLException e) {
             System.err.println("✗ Lỗi kết nối database!");
             System.err.println("  Kiểm tra:");
-            System.err.println("  1. SQL Server đang chạy");
-            System.err.println("  2. Database PetShopDB đã được tạo");
-            System.err.println("  3. Username/Password đúng");
+            System.err.println("  1. Tên server HOUTARO\\SQLEXPRESS đúng chưa?");
+            System.err.println("  2. Đã có file mssql-jdbc_auth.dll chưa?"); // Quan trọng nhất
+            System.err.println("  3. Service 'SQL Server Browser' đã bật chưa?");
             e.printStackTrace();
         }
         return connection;
