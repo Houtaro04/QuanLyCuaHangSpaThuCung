@@ -8,9 +8,9 @@ import java.util.List;
 
 public class BookingRepository {
     
-    // Thêm booking mới
+    // 1. Thêm booking mới
     public boolean addBooking(String customerUser, String petName, String serviceName, 
-                             double price, String appointmentDate) {
+                              double price, String appointmentDate) {
         String sql = "INSERT INTO Bookings (customerUser, petName, serviceName, price, status, appointmentDate) " +
                      "VALUES (?, ?, ?, ?, N'Chờ duyệt', ?)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -30,10 +30,11 @@ public class BookingRepository {
         }
     }
     
-    // Lấy tất cả bookings
+    // 2. Lấy TẤT CẢ bookings (Cho Admin) -> Sắp xếp ID Tăng dần
     public List<Booking> getAllBookings() {
         List<Booking> bookings = new ArrayList<>();
-        String sql = "SELECT * FROM Bookings ORDER BY id DESC";
+        // QUAN TRỌNG: ORDER BY id ASC (Bé -> Lớn)
+        String sql = "SELECT * FROM Bookings ORDER BY id ASC"; 
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -57,10 +58,11 @@ public class BookingRepository {
         return bookings;
     }
     
-    // Lấy bookings theo khách hàng
+    // 3. Lấy bookings theo khách hàng (Cho Lịch sử đơn hàng) -> Sắp xếp ID Tăng dần
     public List<Booking> getBookingsByCustomer(String customerUser) {
         List<Booking> bookings = new ArrayList<>();
-        String sql = "SELECT * FROM Bookings WHERE customerUser = ? ORDER BY id DESC";
+        // QUAN TRỌNG: ORDER BY id ASC (Bé -> Lớn)
+        String sql = "SELECT * FROM Bookings WHERE customerUser = ? ORDER BY id ASC";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -86,7 +88,7 @@ public class BookingRepository {
         return bookings;
     }
     
-    // Lấy booking theo ID
+    // 4. Lấy booking theo ID
     public Booking getBookingById(int id) {
         String sql = "SELECT * FROM Bookings WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -113,7 +115,7 @@ public class BookingRepository {
         return null;
     }
     
-    // Cập nhật trạng thái booking
+    // 5. Cập nhật trạng thái booking
     public boolean updateBookingStatus(int id, String newStatus) {
         String sql = "UPDATE Bookings SET status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -130,7 +132,7 @@ public class BookingRepository {
         }
     }
     
-    // Cập nhật booking
+    // 6. Cập nhật booking (nếu cần)
     public boolean updateBooking(Booking booking) {
         String sql = "UPDATE Bookings SET petName = ?, serviceName = ?, price = ?, " +
                      "status = ?, appointmentDate = ? WHERE id = ?";
@@ -152,7 +154,7 @@ public class BookingRepository {
         }
     }
     
-    // Xóa booking
+    // 7. Xóa booking
     public boolean deleteBooking(int id) {
         String sql = "DELETE FROM Bookings WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -167,10 +169,11 @@ public class BookingRepository {
         }
     }
     
-    // Lấy bookings theo trạng thái
+    // 8. Lấy bookings theo trạng thái -> Sắp xếp ID Tăng dần
     public List<Booking> getBookingsByStatus(String status) {
         List<Booking> bookings = new ArrayList<>();
-        String sql = "SELECT * FROM Bookings WHERE status = ? ORDER BY id DESC";
+        // QUAN TRỌNG: ORDER BY id ASC (Bé -> Lớn)
+        String sql = "SELECT * FROM Bookings WHERE status = ? ORDER BY id ASC";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -196,37 +199,27 @@ public class BookingRepository {
         return bookings;
     }
     
-    // Đếm bookings theo trạng thái
+    // 9. Đếm và Thống kê (Giữ nguyên)
     public int countBookingsByStatus(String status) {
         String sql = "SELECT COUNT(*) FROM Bookings WHERE status = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
             stmt.setString(1, status);
             ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
+            if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) {
-            System.err.println("Lỗi countBookingsByStatus: " + e.getMessage());
             e.printStackTrace();
         }
         return 0;
     }
     
-    // Tính tổng doanh thu
     public double getTotalRevenue() {
         String sql = "SELECT SUM(price) FROM Bookings WHERE status = N'Đã Xong'";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
-            if (rs.next()) {
-                return rs.getDouble(1);
-            }
+            if (rs.next()) return rs.getDouble(1);
         } catch (SQLException e) {
-            System.err.println("Lỗi getTotalRevenue: " + e.getMessage());
             e.printStackTrace();
         }
         return 0;

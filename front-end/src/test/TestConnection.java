@@ -111,7 +111,7 @@ public class TestConnection {
         boolean addResult = petRepo.addPet("TestPet", "Test Species", 1, "khach");
         if (addResult) {
             System.out.println("     ✓ Thêm pet thành công!");
-            
+                
             // Test search
             List<Pet> searchResult = petRepo.searchPets("TestPet");
             if (!searchResult.isEmpty()) {
