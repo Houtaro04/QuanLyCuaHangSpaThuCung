@@ -11,7 +11,6 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.print.PrinterException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class PetManagementApp extends JFrame {
