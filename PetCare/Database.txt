@@ -1,0 +1,85 @@
+USE master;
+GO
+
+-- 1. Xóa database cũ để làm mới
+IF EXISTS (SELECT * FROM sys.databases WHERE name = 'PetShopDB')
+BEGIN
+    ALTER DATABASE PetShopDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE PetShopDB;
+END
+GO
+
+-- 2. Tạo lại Database
+CREATE DATABASE PetShopDB;
+GO
+
+USE PetShopDB;
+GO
+
+-- 3. Tạo bảng Users (ĐÃ CÓ CẢ PHONE VÀ EMAIL)
+CREATE TABLE Users (
+    username NVARCHAR(50) PRIMARY KEY,
+    password NVARCHAR(100) NOT NULL,
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'CUSTOMER')),
+    fullName NVARCHAR(100) NOT NULL,
+    Phone NVARCHAR(20) NULL,    -- Đã có từ lần trước
+    Email NVARCHAR(100) NULL,   -- <--- MỚI THÊM CỘT NÀY ĐỂ SỬA LỖI
+    createdAt DATETIME DEFAULT GETDATE()
+);
+
+-- 4. Tạo bảng Services
+CREATE TABLE Services (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    name NVARCHAR(200) NOT NULL,
+    price DECIMAL(18,2) NOT NULL,
+    isActive BIT DEFAULT 1,
+    createdAt DATETIME DEFAULT GETDATE()
+);
+
+-- 5. Tạo bảng Pets
+CREATE TABLE Pets (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    name NVARCHAR(100) NOT NULL,
+    species NVARCHAR(100) NOT NULL,
+    age INT NOT NULL,
+    ownerUsername NVARCHAR(50) NOT NULL,
+    createdAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (ownerUsername) REFERENCES Users(username) ON DELETE CASCADE
+);
+
+-- 6. Tạo bảng Bookings
+CREATE TABLE Bookings (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    customerUser NVARCHAR(50) NOT NULL,
+    petName NVARCHAR(100) NOT NULL,
+    serviceName NVARCHAR(200) NOT NULL,
+    price DECIMAL(18,2) NOT NULL,
+    status NVARCHAR(50) NOT NULL CHECK (status IN (N'Chờ duyệt', N'Đã Duyệt', N'Đã Xong', N'Đã Hủy')),
+    appointmentDate NVARCHAR(100) NOT NULL,
+    createdAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (customerUser) REFERENCES Users(username)
+);
+
+-- 7. Thêm dữ liệu mẫu (ĐÃ CẬP NHẬT PHONE VÀ EMAIL)
+INSERT INTO Users (username, password, role, fullName, Phone, Email) VALUES
+('admin', '123', 'ADMIN', N'Quản Lý Cửa Hàng', '0909123456', 'admin@petshop.com'),
+('khach', '123', 'CUSTOMER', N'Nguyễn Văn Khách', '0912345678', 'khachhang@gmail.com');
+GO
+
+INSERT INTO Services (name, price) VALUES
+(N'Tắm gội thơm tho', 150000),
+(N'Cắt tỉa tạo kiểu', 250000),
+(N'Combo VIP (Tắm+Cắt)', 350000),
+(N'Tiêm phòng', 100000);
+GO
+
+INSERT INTO Pets (name, species, age, ownerUsername) VALUES
+(N'Mimi', N'Mèo Anh', 2, 'khach'),
+(N'LuLu', N'Poodle', 4, 'khach');
+GO
+
+-- 8. Tạo Index
+CREATE INDEX idx_pets_owner ON Pets(ownerUsername);
+CREATE INDEX idx_bookings_customer ON Bookings(customerUser);
+CREATE INDEX idx_bookings_status ON Bookings(status);
+GO
