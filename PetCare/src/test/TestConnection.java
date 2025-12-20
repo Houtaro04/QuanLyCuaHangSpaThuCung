@@ -108,7 +108,7 @@ public class TestConnection {
         
         // Test thêm pet
         System.out.println("   - Test thêm pet...");
-        boolean addResult = petRepo.addPet("TestPet", "Test Species", 1, "khach");
+        boolean addResult = petRepo.addPet("TestPet", "Test Species", 1, "customer");
         if (addResult) {
             System.out.println("     ✓ Thêm pet thành công!");
                 
