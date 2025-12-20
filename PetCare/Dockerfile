@@ -23,4 +23,4 @@ RUN javac -cp "libs/*" -d out $(find src -name "*.java")
 RUN echo "Main-Class: main.Main" > Manifest.txt
 
 # 6. Đóng gói thành file .jar
-RUN jar cmf Manifest.txt app-final.jar -C out .
+RUN jar cmf Manifest.txt PetCare.jar -C out .
