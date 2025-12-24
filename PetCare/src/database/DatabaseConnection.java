@@ -6,15 +6,10 @@ import java.sql.SQLException;
 
 public class DatabaseConnection {
 
-    // --- CÁC DÒNG CẦN SỬA ---
-    // 1. Sửa DB_URL:
-    //    - Thay localhost:1433 bằng HOUTARO\\SQLEXPRESS (Lưu ý: Phải dùng 2 dấu gạch chéo \\ để Java hiểu là 1 ký tự \)
-    //    - Thêm integratedSecurity=true để dùng tài khoản Windows
-    private static final String DB_URL = "jdbc:sqlserver://DIGGORY\\SQLEXPRESS;databaseName=PetShopDB;integratedSecurity=true;encrypt=false;trustServerCertificate=true;";
+    private static final String DB_URL = "jdbc:sqlserver://HOANGVIET;databaseName=PetShopDB;integratedSecurity=true;encrypt=false;trustServerCertificate=true;";
 
     private static Connection connection = null;
-    
-    // Load JDBC Driver
+
     static {
         try {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -25,29 +20,24 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-    
-    // Lấy kết nối
+
     public static Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
-                // Khi dùng integratedSecurity, DriverManager sẽ tự tìm file .dll để xác thực với Windows
-                connection = DriverManager.getConnection(DB_URL); 
-                // Lưu ý: Có thể bỏ USER, PASS ở hàm getConnection khi dùng URL trên, 
-                // hoặc để nguyên DriverManager.getConnection(DB_URL, USER, PASS) cũng không sao vì USER/PASS rỗng.
+                connection = DriverManager.getConnection(DB_URL);
                 System.out.println("✓ Kết nối database thành công!");
             }
         } catch (SQLException e) {
             System.err.println("✗ Lỗi kết nối database!");
             System.err.println("  Kiểm tra:");
             System.err.println("  1. Tên server HOUTARO\\SQLEXPRESS đúng chưa?");
-            System.err.println("  2. Đã có file mssql-jdbc_auth.dll chưa?"); // Quan trọng nhất
+            System.err.println("  2. Đã có file mssql-jdbc_auth.dll chưa?");
             System.err.println("  3. Service 'SQL Server Browser' đã bật chưa?");
             e.printStackTrace();
         }
         return connection;
     }
-    
-    // Đóng kết nối
+
     public static void closeConnection() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -58,8 +48,7 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-    
-    // Test kết nối
+
     public static boolean testConnection() {
         try {
             Connection conn = getConnection();
